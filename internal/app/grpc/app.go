@@ -2,7 +2,7 @@ package grpcapp
 
 import (
 	"fmt"
-	authgrpc "github.com/eclipsemode/go-grpc-sso/internal/grpc/auth"
+	"github.com/eclipsemode/go-grpc-sso/internal/grpc/auth"
 	"google.golang.org/grpc"
 	"log/slog"
 	"net"
