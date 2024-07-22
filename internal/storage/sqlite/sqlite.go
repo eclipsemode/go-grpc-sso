@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	models "github.com/eclipsemode/go-grpc-sso/internal/domain/model"
 	"github.com/eclipsemode/go-grpc-sso/internal/storage"
 	"github.com/mattn/go-sqlite3"
 )
@@ -56,4 +57,32 @@ func (s *Storage) SaveUser(ctx context.Context, email string, passHash []byte) (
 	}
 
 	return id, nil
+}
+
+func (s *Storage) User(ctx context.Context, email string) (models.User, error) {
+	const op = "storage.sqlite.User"
+
+	stmt, err := s.db.Prepare("SELECT * FROM users WHERE email = ?")
+	if err != nil {
+		return models.User{}, fmt.Errorf("%s: %w", op, err)
+	}
+
+	defer func(stmt *sql.Stmt) {
+		if err := stmt.Close(); err != nil {
+			panic(err)
+		}
+	}(stmt)
+
+	var user models.User
+
+	err = stmt.QueryRowContext(ctx, email).Scan(&user.ID, &user.Email)
+	if errors.Is(err, sql.ErrNoRows) {
+		return models.User{}, fmt.Errorf("%s: %w", op, storage.ErrUserNotFound)
+	}
+
+	if err != nil {
+		return models.User{}, fmt.Errorf("%s: %w", op, err)
+	}
+
+	return user, nil
 }
