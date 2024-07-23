@@ -64,7 +64,7 @@ func (s *Storage) SaveUser(ctx context.Context, email string, passHash []byte) (
 func (s *Storage) User(ctx context.Context, email string) (models.User, error) {
 	const op = "storage.sqlite.User"
 
-	stmt, err := s.db.Prepare("SELECT * FROM users WHERE email = ?")
+	stmt, err := s.db.Prepare("SELECT id, email, pass_hash FROM users WHERE email = ?")
 	if err != nil {
 		return models.User{}, fmt.Errorf("%s: %w", op, storage.ErrUserNotFound)
 	}
@@ -77,7 +77,7 @@ func (s *Storage) User(ctx context.Context, email string) (models.User, error) {
 
 	var user models.User
 
-	err = stmt.QueryRowContext(ctx, email).Scan(&user.ID, &user.Email)
+	err = stmt.QueryRowContext(ctx, email).Scan(&user.ID, &user.Email, &user.PassHash)
 	if errors.Is(err, sql.ErrNoRows) {
 		return models.User{}, fmt.Errorf("%s: %w", op, storage.ErrAppNotFound)
 	}
