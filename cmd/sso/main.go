@@ -17,22 +17,20 @@ const (
 )
 
 func main() {
-	//TODO: инициализировать обьект кофига
+	// инициализировать обьект кофига
 	cfg := config.MustLoad()
 
-	//TODO: инициализировать логгер
+	// инициализировать логгер
 
 	log := setupLogger(cfg.Env)
 
 	log.Info("starting server", slog.Any("cfg", cfg))
 
+	// инициализировать приложение (app)
 	application := app.New(log, cfg.GRPC.Port, cfg.StoragePath, cfg.TokenTTL)
 
+	// запустить gRPC-сервер приложения
 	go application.GRPCSrv.MustRun()
-
-	//TODO: инициализировать приложение (app)
-
-	//TODO: запустить gRPC-сервер приложения
 
 	//Graceful shutdown
 	stop := make(chan os.Signal, 1)

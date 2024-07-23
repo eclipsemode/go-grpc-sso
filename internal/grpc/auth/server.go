@@ -2,7 +2,10 @@ package authgrpc
 
 import (
 	"context"
+	"errors"
 	ssov1 "github.com/eclipsemode/go-grpc-sso-protobuf/gen/go/sso"
+	"github.com/eclipsemode/go-grpc-sso/internal/services/auth"
+	"github.com/eclipsemode/go-grpc-sso/internal/storage"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -48,10 +51,12 @@ func (s *serverAPI) Login(
 		return nil, status.Error(codes.InvalidArgument, "missing app id")
 	}
 
-	// implement login via auth service
+	// implement login via suite service
 	token, err := s.auth.Login(ctx, req.GetEmail(), req.GetPassword(), int(req.GetAppId()))
 	if err != nil {
-		//TODO: ...
+		if errors.Is(err, auth.ErrInvalidCredentials) {
+			return nil, status.Error(codes.InvalidArgument, "invalid credentials")
+		}
 		return nil, status.Error(codes.Internal, "internal server error")
 	}
 
@@ -74,7 +79,8 @@ func (s *serverAPI) Register(
 
 	userID, err := s.auth.RegisterNewUser(ctx, req.GetEmail(), req.GetPassword())
 	if err != nil {
-		//TODO: ...
+		if errors.Is(err, auth.ErrUserExists) {
+		}
 		return nil, status.Error(codes.Internal, "internal server error")
 	}
 
@@ -93,7 +99,9 @@ func (s *serverAPI) IsAdmin(
 
 	isAdmin, err := s.auth.IsAdmin(ctx, req.GetUserId())
 	if err != nil {
-		//TODO: ...
+		if errors.Is(err, storage.ErrUserNotFound) {
+			return nil, status.Error(codes.NotFound, "user not found")
+		}
 		return nil, status.Error(codes.Internal, "internal server error")
 	}
 
