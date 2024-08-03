@@ -5,7 +5,6 @@ import (
 	"errors"
 	ssov1 "github.com/eclipsemode/go-grpc-sso-protobuf/gen/go/sso"
 	"github.com/eclipsemode/go-grpc-sso/internal/services/auth"
-	"github.com/eclipsemode/go-grpc-sso/internal/storage"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -13,6 +12,14 @@ import (
 
 const (
 	emptyValue = 0
+)
+
+const (
+	ErrMissingEmail           = "email is missing"
+	ErrMissingPassword        = "password is missing"
+	ErrMissingAppId           = "appId is missing"
+	ErrMissingUserId          = "userId is missing"
+	ErrInvalidEmailOrPassword = "invalid email or password"
 )
 
 type Auth interface {
@@ -40,22 +47,22 @@ func (s *serverAPI) Login(
 	req *ssov1.LoginRequest,
 ) (*ssov1.LoginResponse, error) {
 	if req.GetEmail() == "" {
-		return nil, status.Error(codes.InvalidArgument, "missing email")
+		return nil, status.Error(codes.InvalidArgument, ErrMissingEmail)
 	}
 
 	if req.GetPassword() == "" {
-		return nil, status.Error(codes.InvalidArgument, "missing password")
+		return nil, status.Error(codes.InvalidArgument, ErrMissingPassword)
 	}
 
 	if req.GetAppId() == emptyValue {
-		return nil, status.Error(codes.InvalidArgument, "missing app id")
+		return nil, status.Error(codes.InvalidArgument, ErrMissingAppId)
 	}
 
 	// implement login via suite service
 	token, err := s.auth.Login(ctx, req.GetEmail(), req.GetPassword(), int(req.GetAppId()))
 	if err != nil {
 		if errors.Is(err, auth.ErrInvalidCredentials) {
-			return nil, status.Error(codes.InvalidArgument, "invalid credentials")
+			return nil, status.Error(codes.InvalidArgument, ErrInvalidEmailOrPassword)
 		}
 		return nil, status.Error(codes.Internal, "internal server error")
 	}
@@ -70,16 +77,17 @@ func (s *serverAPI) Register(
 	req *ssov1.RegisterRequest,
 ) (*ssov1.RegisterResponse, error) {
 	if req.GetEmail() == "" {
-		return nil, status.Error(codes.InvalidArgument, "missing email")
+		return nil, status.Error(codes.InvalidArgument, ErrMissingEmail)
 	}
 
 	if req.GetPassword() == "" {
-		return nil, status.Error(codes.InvalidArgument, "missing password")
+		return nil, status.Error(codes.InvalidArgument, ErrMissingPassword)
 	}
 
 	userID, err := s.auth.RegisterNewUser(ctx, req.GetEmail(), req.GetPassword())
 	if err != nil {
 		if errors.Is(err, auth.ErrUserExists) {
+			return nil, status.Error(codes.AlreadyExists, auth.ErrUserExists.Error())
 		}
 		return nil, status.Error(codes.Internal, "internal server error")
 	}
@@ -94,13 +102,13 @@ func (s *serverAPI) IsAdmin(
 	req *ssov1.IsAdminRequest,
 ) (*ssov1.IsAdminResponse, error) {
 	if req.GetUserId() == emptyValue {
-		return nil, status.Error(codes.InvalidArgument, "missing user id")
+		return nil, status.Error(codes.InvalidArgument, ErrMissingUserId)
 	}
 
 	isAdmin, err := s.auth.IsAdmin(ctx, req.GetUserId())
 	if err != nil {
-		if errors.Is(err, storage.ErrUserNotFound) {
-			return nil, status.Error(codes.NotFound, "user not found")
+		if errors.Is(err, auth.ErrUserNotFound) {
+			return nil, status.Error(codes.NotFound, auth.ErrUserNotFound.Error())
 		}
 		return nil, status.Error(codes.Internal, "internal server error")
 	}

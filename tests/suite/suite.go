@@ -7,6 +7,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"net"
+	"os"
 	"strconv"
 	"testing"
 )
@@ -25,7 +26,7 @@ func New(t *testing.T) (context.Context, *Suite) {
 	t.Helper()
 	t.Parallel()
 
-	cfg := config.MustLoadByPath("../config/local.yaml")
+	cfg := config.MustLoadByPath(configPath())
 
 	ctx, cancelCtx := context.WithTimeout(context.Background(), cfg.GRPC.Timeout)
 
@@ -48,6 +49,16 @@ func New(t *testing.T) (context.Context, *Suite) {
 		AuthClient: ssov1.NewAuthClient(cc),
 	}
 
+}
+
+func configPath() string {
+	const key = "CONFIG_PATH"
+
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+
+	return "../config/local_tests.yaml"
 }
 
 func grpcAddress(cfg *config.Config) string {
